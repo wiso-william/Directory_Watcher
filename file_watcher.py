@@ -20,6 +20,8 @@ def producer(q: Queue, watch_dir: Path, stop_event: threading.Event):
     seen_files: set[Path] = set()
     candidates: dict[Path, datetime] = {}
 
+    logger.info("Producer avviato")
+
     while not stop_event.is_set():
         now = datetime.now(timezone.utc)
 
@@ -27,10 +29,7 @@ def producer(q: Queue, watch_dir: Path, stop_event: threading.Event):
             if not path.is_file():
                 continue
 
-            mtime = datetime.fromtimestamp(
-                path.stat().st_mtime,
-                tz=timezone.utc
-            )
+            mtime = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
 
             if path not in candidates:
                 candidates[path] = mtime
@@ -47,6 +46,7 @@ def producer(q: Queue, watch_dir: Path, stop_event: threading.Event):
 
         time.sleep(POLL_INTERVAL)
 
+    logger.info("Producer terminato")
 
 def consumer(q: Queue):
     """
