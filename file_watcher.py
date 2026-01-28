@@ -6,7 +6,7 @@ from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from config.logging_config import setup_logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('File Watcher')
 SENTINEL = object()
 
 PATH_TO_WATCH = Path('watch_dir')
@@ -67,21 +67,24 @@ def main():
     PATH_TO_WATCH.mkdir(exist_ok=True)
 
     q = Queue()
-
-    prod = threading.Thread(target=producer, args=(q,PATH_TO_WATCH))
-    cons = threading.Thread(target=consumer,args=(q,))
     stop_event = threading.Event()
 
+    prod = threading.Thread(target=producer,args=(q, PATH_TO_WATCH, stop_event))
+    cons = threading.Thread(target=consumer,args=(q,))
     prod.start()
     cons.start()
 
     try:
         prod.join()
-        q.join()
     except KeyboardInterrupt:
-        logger.warning("Interruzione ricevuta")
+        logger.warning("KeyboardInterrupt ricevuto, avvio shutdown")
+        stop_event.set()
+        q.put(SENTINEL)
     finally:
-        logger.info("Main terminato")
+        prod.join()
+        q.join()
+        cons.join()
+        logger.info("Shutdown completato")
 
 if __name__ == '__main__':
     main()
